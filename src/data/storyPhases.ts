@@ -6,8 +6,7 @@ export const VIDEO_DURATION = VIDEO_TOTAL_FRAMES / VIDEO_FPS;
 export const VIDEO_SRC = "/videos/pv-story.mp4";
 export const VIDEO_SRC_MOBILE = "/videos/pv-story-mobile.mp4";
 export const VIDEO_POSTER = "/images/pv-story-poster.jpg";
-/** Scroll distance dedicated to the video story, in viewport-heights. Shared with
- * EnergyFlowDiagram so it can position its own pin exactly where the video's ends. */
+/** Scroll distance dedicated to the hero video, in viewport-heights. */
 export const VIDEO_SCROLL_VH = 5;
 
 export const DIAGRAM_FPS = 24;
@@ -125,4 +124,24 @@ export const diagramStoryPhases: DiagramStoryPhase[] = [
     startFrame: 415,
     endFrame: 473,
   },
+];
+
+/** Combined scroll distance for the single unbroken pin spanning both videos. */
+export const TOTAL_SCROLL_VH = VIDEO_SCROLL_VH + DIAGRAM_SCROLL_VH;
+/** Combined frame count: the hero video's frames, then the diagram video's. */
+export const TOTAL_STORY_FRAMES = VIDEO_TOTAL_FRAMES + DIAGRAM_TOTAL_FRAMES;
+
+/**
+ * All twelve beats on one continuous frame timeline (0 to TOTAL_STORY_FRAMES - 1), for
+ * driving captions across a single pin that never releases between the two videos. The
+ * diagram phases' frames get shifted by VIDEO_TOTAL_FRAMES here; subtract that back off
+ * to get the diagram video's own local frame number for seeking it.
+ */
+export const combinedStoryPhases: VideoStoryPhase[] = [
+  ...videoStoryPhases,
+  ...diagramStoryPhases.map((phase) => ({
+    ...phase,
+    startFrame: phase.startFrame + VIDEO_TOTAL_FRAMES,
+    endFrame: phase.endFrame + VIDEO_TOTAL_FRAMES,
+  })),
 ];
