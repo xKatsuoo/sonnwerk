@@ -153,7 +153,10 @@ export function VideoScrollEngine({ onActivePhase }: VideoScrollEngineProps) {
       videoStoryPhases.forEach((phase, i) => {
         const el = phaseRefs.current[i];
         if (!el) return;
-        const opacity = captionOpacity(frame, phase.startFrame, phase.endFrame, FADE_FRAMES);
+        const opacity = captionOpacity(frame, phase.startFrame, phase.endFrame, FADE_FRAMES, {
+          fadeIn: i > 0,
+          fadeOut: i < videoStoryPhases.length - 1,
+        });
         if (opacity > 0.5) activeIndex = i;
         gsap.set(el, { opacity, y: (1 - opacity) * 14 });
       });

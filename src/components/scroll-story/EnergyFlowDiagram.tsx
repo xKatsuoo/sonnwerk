@@ -160,7 +160,10 @@ export function EnergyFlowDiagram({ onActivePhase }: EnergyFlowDiagramProps) {
         diagramStoryPhases.forEach((phase, i) => {
           const el = captionRefs.current[i];
           if (!el) return;
-          const opacity = captionOpacity(progress, phase.start, phase.end, CAPTION_MARGIN);
+          const opacity = captionOpacity(progress, phase.start, phase.end, CAPTION_MARGIN, {
+            fadeIn: i > 0,
+            fadeOut: i < diagramStoryPhases.length - 1,
+          });
           gsap.set(el, { opacity, y: (1 - opacity) * 14 });
           if (opacity > 0.5) activeIndex = i;
         });
