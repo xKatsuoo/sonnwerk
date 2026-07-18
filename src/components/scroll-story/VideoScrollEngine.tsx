@@ -12,16 +12,13 @@ import {
   VIDEO_TOTAL_FRAMES,
   videoStoryPhases,
 } from "@/data/storyPhases";
+import { captionOpacity, clamp01 } from "@/lib/crossfade";
 import { cn } from "@/lib/cn";
 
 /** Scroll distance dedicated to the video story, in viewport-heights. Tune for scrub granularity. */
 const SCROLL_VH = 5;
-/** Half-width, in frames, of the crossfade window between two adjacent phase captions. */
+/** Width, in frames, of the crossfade window between two adjacent phase captions. */
 const FADE_FRAMES = 26;
-
-function clamp01(n: number) {
-  return Math.min(1, Math.max(0, n));
-}
 
 interface VideoScrollEngineProps {
   onActivePhase: (index: number) => void;
@@ -131,16 +128,7 @@ export function VideoScrollEngine({ onActivePhase }: VideoScrollEngineProps) {
       videoStoryPhases.forEach((phase, i) => {
         const el = phaseRefs.current[i];
         if (!el) return;
-        let opacity = 0;
-        if (frame >= phase.startFrame - FADE_FRAMES && frame <= phase.endFrame + FADE_FRAMES) {
-          if (frame < phase.startFrame) {
-            opacity = clamp01((frame - (phase.startFrame - FADE_FRAMES)) / FADE_FRAMES);
-          } else if (frame > phase.endFrame) {
-            opacity = clamp01(1 - (frame - phase.endFrame) / FADE_FRAMES);
-          } else {
-            opacity = 1;
-          }
-        }
+        const opacity = captionOpacity(frame, phase.startFrame, phase.endFrame, FADE_FRAMES);
         if (opacity > 0.5) activeIndex = i;
         gsap.set(el, { opacity, y: (1 - opacity) * 14 });
       });
