@@ -21,11 +21,16 @@ const OUT_IMAGE_DIR = join(ROOT, "public", "images");
 
 const FPS = 24;
 const FRAMES_PER_CLIP = 240; // 10s @ 24fps, matches raw clip length exactly
-const WIDTH = 1280;
-const HEIGHT = 720;
+const WIDTH = 1920;
+const HEIGHT = 1080;
 const MOBILE_WIDTH = 854;
 const MOBILE_HEIGHT = 480;
-const GOP = 6; // short keyframe interval so random-access scrubbing stays smooth
+// Keyframe interval: short enough that any seek only needs to decode a few delta
+// frames, but not so short that rapid scrubbing has to keep decoding a fresh full
+// frame every quarter-second. At 1080p a keyframe is ~4x the pixel data of 720p, so
+// GOP=6 (which was fine at 720p) made every fast scroll re-decode a very heavy frame
+// too often and froze the page. 12 (0.5s) keeps seeks cheap without that overload.
+const GOP = 12;
 
 /** Story phases the finished, concatenated video is divided into. */
 const SEGMENTS = [
