@@ -1,28 +1,22 @@
+import { prefersReducedVideoQuality } from "@/lib/deviceCapability";
+
 export interface VideoScrubberConfig {
   videoEl: HTMLVideoElement | null;
   mobileVideoEl: HTMLVideoElement | null;
   canvasEl: HTMLCanvasElement | null;
   videoSrc: string;
+  /** 720p rendition, used instead of videoSrc on devices prefersReducedVideoQuality flags. */
+  videoSrcReduced: string;
   videoSrcMobile: string;
   totalFrames: number;
   fps: number;
 }
 
-/**
- * Common interface for both the frame-accurate scrubber and its lightweight fallback
- * (see createLightweightPlayer), so a shared scroll-driven trigger can call either
- * uniformly without caring which one a given device ended up with.
- */
-export interface StoryVideoEngine {
+export interface VideoScrubber {
   /** Scrub to an exact frame, forwards or backwards. Safe to call every scroll tick. */
   seekTo(frame: number): void;
-  /** Whether this video is the one currently in view. Drives the lightweight player's
-   * play/pause; a no-op for the frame-accurate scrubber. */
-  setActive(active: boolean): void;
   dispose(): void;
 }
-
-export type VideoScrubber = StoryVideoEngine;
 
 /**
  * Wires up one video (or its canvas fallback) for frame-accurate scroll-scrubbing.
@@ -36,18 +30,19 @@ export function createVideoScrubber({
   mobileVideoEl,
   canvasEl,
   videoSrc,
+  videoSrcReduced,
   videoSrcMobile,
   totalFrames,
   fps,
-}: VideoScrubberConfig): StoryVideoEngine | null {
-  // Read the media query directly instead of depending on a reactive isMobile value:
-  // that state starts false during SSR and flips true just after mount on real mobile
-  // devices, which would otherwise tear down and recreate this trigger. Killing and
-  // rebuilding a pin makes the section's height collapse to its natural, unpinned size
-  // for an instant — and GSAP measures the *next* pinned section's start position off
-  // of that same instant, permanently baking in a start value that's short by this
-  // section's entire scroll distance. Reading the query fresh here means the pin is
-  // built once, correctly, and never needs to be torn down.
+}: VideoScrubberConfig): VideoScrubber | null {
+  // Read these fresh instead of depending on reactive state: that state starts false
+  // during SSR and flips true just after mount on real mobile devices, which would
+  // otherwise tear down and recreate this trigger. Killing and rebuilding a pin makes
+  // the section's height collapse to its natural, unpinned size for an instant — and
+  // GSAP measures the *next* pinned section's start position off of that same instant,
+  // permanently baking in a start value that's short by this section's entire scroll
+  // distance. Reading fresh here means the pin is built once, correctly, and never
+  // needs to be torn down.
   const isMobileNow = typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches;
   const supportsRVFC =
     typeof HTMLVideoElement !== "undefined" && "requestVideoFrameCallback" in HTMLVideoElement.prototype;
@@ -58,8 +53,11 @@ export function createVideoScrubber({
   if (!sourceVideo) return null;
 
   // Only the element actually driving the scrub gets a `src`, so the browser never
-  // fetches both the desktop and mobile renditions at once.
-  sourceVideo.src = useCanvas ? videoSrcMobile : videoSrc;
+  // fetches more than one rendition at once. The desktop rendition is 1080p, which is
+  // too heavy to seek smoothly on old low-core-count machines and on iOS/iPadOS Safari
+  // (which janks seeking regardless of chip generation) — those get the 720p rendition
+  // instead, with the exact same scrubbing behavior either way.
+  sourceVideo.src = useCanvas ? videoSrcMobile : prefersReducedVideoQuality() ? videoSrcReduced : videoSrc;
 
   let metadataReady = sourceVideo.readyState >= 1;
   let seeking = false;
@@ -146,57 +144,12 @@ export function createVideoScrubber({
       targetFrame = frame;
       advance();
     },
-    setActive() {
-      // Visibility is opacity-driven for the scrubbed layers; every frame is seeked
-      // regardless of which one is currently on top, so there's nothing to do here.
-    },
     dispose() {
       disposed = true;
       clearTimeout(watchdog);
       sourceVideo.removeEventListener("seeked", settle);
       sourceVideo.removeEventListener("loadeddata", draw);
       sourceVideo.removeEventListener("loadedmetadata", onLoadedMetadata);
-    },
-  };
-}
-
-export interface LightweightPlayerConfig {
-  videoEl: HTMLVideoElement | null;
-  /** Always the smaller/mobile rendition — the point of this path is to be cheap. */
-  src: string;
-}
-
-/**
- * The fallback for devices where frame-accurate seeking is too heavy (see
- * prefersLightweightVideo): the video just plays forward on a loop, which every
- * browser's video pipeline handles far more cheaply than repeated fresh seeks.
- * `seekTo` is a no-op — captions stay in sync with scroll on their own; only which
- * video is currently playing needs to track scroll position, via `setActive`.
- */
-export function createLightweightPlayer({ videoEl, src }: LightweightPlayerConfig): StoryVideoEngine | null {
-  if (!videoEl) return null;
-
-  videoEl.src = src;
-  videoEl.loop = true;
-  let disposed = false;
-  let active = false;
-
-  return {
-    seekTo() {
-      // Intentionally a no-op — see doc comment above.
-    },
-    setActive(next: boolean) {
-      if (disposed || next === active) return;
-      active = next;
-      if (active) {
-        Promise.resolve(videoEl.play()).catch(() => {});
-      } else {
-        videoEl.pause();
-      }
-    },
-    dispose() {
-      disposed = true;
-      videoEl.pause();
     },
   };
 }

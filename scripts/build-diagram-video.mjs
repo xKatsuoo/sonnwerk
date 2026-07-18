@@ -22,6 +22,8 @@ buildScrollVideo({
   height: 1080,
   mobileWidth: 854,
   mobileHeight: 480,
+  reducedWidth: 1280,
+  reducedHeight: 720,
   gop: 12,
   segments: [
     {

@@ -26,13 +26,28 @@ function run(args) {
  * @param {number} config.height
  * @param {number} config.mobileWidth
  * @param {number} config.mobileHeight
+ * @param {number} config.reducedWidth - lower-resolution rendition for devices too slow to scrub 1080p smoothly
+ * @param {number} config.reducedHeight
  * @param {number} config.gop - keyframe interval in frames
  * @param {Array<{file: string, frames?: number, phases: Array<{id: string, label: string, startFrame: number, endFrame: number}>}>} config.segments
  *   `frames` trims the source clip to that many frames (omit to use the clip's full length).
  */
 export function buildScrollVideo(config) {
-  const { srcDir, outVideoDir, outImageDir, outBaseName, fps, width, height, mobileWidth, mobileHeight, gop, segments } =
-    config;
+  const {
+    srcDir,
+    outVideoDir,
+    outImageDir,
+    outBaseName,
+    fps,
+    width,
+    height,
+    mobileWidth,
+    mobileHeight,
+    reducedWidth,
+    reducedHeight,
+    gop,
+    segments,
+  } = config;
 
   for (const seg of segments) {
     const path = join(srcDir, seg.file);
@@ -119,11 +134,41 @@ export function buildScrollVideo(config) {
     mobileVideo,
   ]);
 
-  console.log("[4/5] Extracting poster frame...");
+  console.log("[4/6] Encoding reduced-resolution variant for slower devices...");
+  const reducedVideo = join(outVideoDir, `${outBaseName}-reduced.mp4`);
+  run([
+    "-y",
+    "-i",
+    finalVideo,
+    "-an",
+    "-vf",
+    `scale=${reducedWidth}:${reducedHeight}:flags=lanczos`,
+    "-c:v",
+    "libx264",
+    "-profile:v",
+    "high",
+    "-pix_fmt",
+    "yuv420p",
+    "-g",
+    String(gop),
+    "-keyint_min",
+    String(gop),
+    "-sc_threshold",
+    "0",
+    "-crf",
+    "23",
+    "-preset",
+    "slow",
+    "-movflags",
+    "+faststart",
+    reducedVideo,
+  ]);
+
+  console.log("[5/6] Extracting poster frame...");
   const poster = join(outImageDir, `${outBaseName}-poster.jpg`);
   run(["-y", "-i", finalVideo, "-frames:v", "1", "-update", "1", "-q:v", "2", poster]);
 
-  console.log("[5/5] Writing frame metadata...");
+  console.log("[6/6] Writing frame metadata...");
   const lastPhase = segments[segments.length - 1].phases.slice(-1)[0];
   const totalFrames = lastPhase.endFrame + 1;
   const phases = segments.flatMap((s) => s.phases);
@@ -139,6 +184,6 @@ export function buildScrollVideo(config) {
 
   rmSync(tmp, { recursive: true, force: true });
   console.log(
-    `Done. Wrote ${outBaseName}.mp4, ${outBaseName}-mobile.mp4, ${outBaseName}-poster.jpg, ${outBaseName}-meta.json`,
+    `Done. Wrote ${outBaseName}.mp4, ${outBaseName}-mobile.mp4, ${outBaseName}-reduced.mp4, ${outBaseName}-poster.jpg, ${outBaseName}-meta.json`,
   );
 }

@@ -17,6 +17,8 @@ buildScrollVideo({
   height: 1080,
   mobileWidth: 854,
   mobileHeight: 480,
+  reducedWidth: 1280,
+  reducedHeight: 720,
   // Keyframe interval: short enough that any seek only needs to decode a few delta
   // frames, but not so short that rapid scrubbing has to keep decoding a fresh full
   // frame every quarter-second. At 1080p a keyframe is ~4x the pixel data of 720p, so

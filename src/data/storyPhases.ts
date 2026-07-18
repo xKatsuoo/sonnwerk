@@ -5,6 +5,8 @@ export const VIDEO_TOTAL_FRAMES = 720;
 export const VIDEO_DURATION = VIDEO_TOTAL_FRAMES / VIDEO_FPS;
 export const VIDEO_SRC = "/videos/pv-story.mp4";
 export const VIDEO_SRC_MOBILE = "/videos/pv-story-mobile.mp4";
+/** 720p rendition for devices too slow to scrub the full 1080p video smoothly. */
+export const VIDEO_SRC_REDUCED = "/videos/pv-story-reduced.mp4";
 export const VIDEO_POSTER = "/images/pv-story-poster.jpg";
 /** Scroll distance dedicated to the hero video, in viewport-heights. */
 export const VIDEO_SCROLL_VH = 5;
@@ -14,6 +16,8 @@ export const DIAGRAM_TOTAL_FRAMES = 474;
 export const DIAGRAM_DURATION = DIAGRAM_TOTAL_FRAMES / DIAGRAM_FPS;
 export const DIAGRAM_SRC = "/videos/pv-diagram.mp4";
 export const DIAGRAM_SRC_MOBILE = "/videos/pv-diagram-mobile.mp4";
+/** 720p rendition for devices too slow to scrub the full 1080p video smoothly. */
+export const DIAGRAM_SRC_REDUCED = "/videos/pv-diagram-reduced.mp4";
 export const DIAGRAM_POSTER = "/images/pv-diagram-poster.jpg";
 export const DIAGRAM_SCROLL_VH = 4.5;
 
