@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+:root {
+  --color-white: #ffffff;
+  --color-ink: #0a0a0b;
+  --color-anthracite: #16181c;
+  --color-anthracite-soft: #202329;
+  --color-gray-50: #f7f7f8;
+  --color-gray-100: #eeeef0;
+  --color-gray-200: #e2e3e6;
+  --color-gray-300: #c8cad0;
+  --color-gray-400: #9a9da5;
+  --color-gray-500: #6b6e76;
+  --color-gray-600: #4b4e56;
+  --color-solar-blue: #2f6bff;
+  --color-solar-blue-light: #6ea0ff;
+  --color-solar-blue-dim: #0f2e73;
+
+  --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+@theme inline {
+  --color-white: var(--color-white);
+  --color-ink: var(--color-ink);
+  --color-anthracite: var(--color-anthracite);
+  --color-anthracite-soft: var(--color-anthracite-soft);
+  --color-gray-50: var(--color-gray-50);
+  --color-gray-100: var(--color-gray-100);
+  --color-gray-200: var(--color-gray-200);
+  --color-gray-300: var(--color-gray-300);
+  --color-gray-400: var(--color-gray-400);
+  --color-gray-500: var(--color-gray-500);
+  --color-gray-600: var(--color-gray-600);
+  --color-solar-blue: var(--color-solar-blue);
+  --color-solar-blue-light: var(--color-solar-blue-light);
+  --color-solar-blue-dim: var(--color-solar-blue-dim);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --animate-fade-in: fade-in 0.8s var(--ease-premium) both;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-white);
+  color: var(--color-ink);
+  font-feature-settings:
+    "ss01" on,
+    "cv11" on;
+}
+
+::selection {
+  background: var(--color-solar-blue);
+  color: var(--color-white);
+}
+
+/* Keeps focus rings visible for keyboard users without a permanent outline on mouse click. */
+:focus-visible {
+  outline: 2px solid var(--color-solar-blue);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.balance {
+  text-wrap: balance;
+}
+
+.pretty {
+  text-wrap: pretty;
+}

@@ -1,0 +1,39 @@
+{
+  "fps": 24,
+  "totalFrames": 720,
+  "duration": 30,
+  "width": 1280,
+  "height": 720,
+  "phases": [
+    {
+      "id": "haus",
+      "label": "Ihr Zuhause",
+      "startFrame": 0,
+      "endFrame": 119
+    },
+    {
+      "id": "dachanalyse",
+      "label": "Dachanalyse",
+      "startFrame": 120,
+      "endFrame": 239
+    },
+    {
+      "id": "pv-planung",
+      "label": "PV-Planung",
+      "startFrame": 240,
+      "endFrame": 479
+    },
+    {
+      "id": "montage",
+      "label": "Montage",
+      "startFrame": 480,
+      "endFrame": 599
+    },
+    {
+      "id": "fertige-anlage",
+      "label": "Fertige Anlage",
+      "startFrame": 600,
+      "endFrame": 719
+    }
+  ]
+}
