@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import {
   VIDEO_FPS,
   VIDEO_POSTER,
+  VIDEO_SCROLL_VH,
   VIDEO_SRC,
   VIDEO_SRC_MOBILE,
   VIDEO_TOTAL_FRAMES,
@@ -15,8 +16,6 @@ import {
 import { captionOpacity, clamp01 } from "@/lib/crossfade";
 import { cn } from "@/lib/cn";
 
-/** Scroll distance dedicated to the video story, in viewport-heights. Tune for scrub granularity. */
-const SCROLL_VH = 5;
 /** Width, in frames, of the crossfade window between two adjacent phase captions. */
 const FADE_FRAMES = 26;
 
@@ -43,9 +42,18 @@ export function VideoScrollEngine({ onActivePhase }: VideoScrollEngineProps) {
     const section = sectionRef.current;
     if (!section) return;
 
+    // Read the media query directly instead of depending on the `isMobile` state value:
+    // that state starts false during SSR and flips true just after mount on real mobile
+    // devices, which would otherwise tear down and recreate this trigger. Killing and
+    // rebuilding a pin makes the section's height collapse to its natural, unpinned size
+    // for an instant — and GSAP measures the *next* pinned section's start position off
+    // of that same instant, permanently baking in a start value that's short by this
+    // section's entire scroll distance. Reading the query fresh here means the pin is
+    // built once, correctly, and never needs to be torn down.
+    const isMobileNow = typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches;
     const supportsRVFC =
       typeof HTMLVideoElement !== "undefined" && "requestVideoFrameCallback" in HTMLVideoElement.prototype;
-    const useCanvas = isMobile || !supportsRVFC;
+    const useCanvas = isMobileNow || !supportsRVFC;
     const sourceVideo = useCanvas ? mobileVideoRef.current : videoRef.current;
     const canvas = canvasRef.current;
     const ctx2d = useCanvas ? (canvas?.getContext("2d") ?? null) : null;
@@ -100,8 +108,25 @@ export function VideoScrollEngine({ onActivePhase }: VideoScrollEngineProps) {
       watchdog = setTimeout(settle, 400);
     };
 
+    // On many mobile browsers, seeking a video that has never played never actually
+    // decodes a paintable frame — drawImage() silently produces nothing, so the canvas
+    // stays blank. Priming with a muted play()/pause() the moment metadata is ready
+    // forces the decoder to actually start producing frames for later seeks to use.
+    let primed = false;
+    const primeDecoder = () => {
+      if (primed || !useCanvas) return;
+      primed = true;
+      Promise.resolve(sourceVideo.play())
+        .then(() => {
+          sourceVideo.pause();
+          draw();
+        })
+        .catch(() => {});
+    };
+
     const onLoadedMetadata = () => {
       metadataReady = true;
+      primeDecoder();
       draw();
       advance();
     };
@@ -141,7 +166,7 @@ export function VideoScrollEngine({ onActivePhase }: VideoScrollEngineProps) {
     const trigger = ScrollTrigger.create({
       trigger: section,
       start: "top top",
-      end: () => `+=${window.innerHeight * SCROLL_VH}`,
+      end: () => `+=${window.innerHeight * VIDEO_SCROLL_VH}`,
       pin: true,
       pinSpacing: true,
       scrub: true,
@@ -164,7 +189,7 @@ export function VideoScrollEngine({ onActivePhase }: VideoScrollEngineProps) {
       sourceVideo.removeEventListener("loadeddata", draw);
       sourceVideo.removeEventListener("loadedmetadata", onLoadedMetadata);
     };
-  }, [isMobile, onActivePhase]);
+  }, [onActivePhase]);
 
   return (
     <section

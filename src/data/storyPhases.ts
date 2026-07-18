@@ -6,6 +6,9 @@ export const VIDEO_DURATION = VIDEO_TOTAL_FRAMES / VIDEO_FPS;
 export const VIDEO_SRC = "/videos/pv-story.mp4";
 export const VIDEO_SRC_MOBILE = "/videos/pv-story-mobile.mp4";
 export const VIDEO_POSTER = "/images/pv-story-poster.jpg";
+/** Scroll distance dedicated to the video story, in viewport-heights. Shared with
+ * EnergyFlowDiagram so it can position its own pin exactly where the video's ends. */
+export const VIDEO_SCROLL_VH = 5;
 
 /** The five video-driven beats: everything the drone footage actually shows. */
 export const videoStoryPhases: VideoStoryPhase[] = [

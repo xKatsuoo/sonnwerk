@@ -34,13 +34,6 @@ export function ScrollStory() {
       onToggle: (self) => setRailVisible(self.isActive),
     });
 
-    // The video and diagram pins are created independently by their own child
-    // effects; the diagram's start position depends on the video's pin-spacer
-    // already existing. Refreshing once more, after both children have mounted,
-    // recalculates every trigger against the final DOM layout so the diagram
-    // doesn't pin in prematurely and cover the still-playing video.
-    ScrollTrigger.refresh();
-
     return () => trigger.kill();
   }, []);
 
