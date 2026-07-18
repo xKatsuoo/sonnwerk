@@ -12,14 +12,14 @@ export const VIDEO_POSTER = "/images/pv-story-poster.jpg";
 export const VIDEO_SCROLL_VH = 5;
 
 export const DIAGRAM_FPS = 24;
-export const DIAGRAM_TOTAL_FRAMES = 474;
+export const DIAGRAM_TOTAL_FRAMES = 954;
 export const DIAGRAM_DURATION = DIAGRAM_TOTAL_FRAMES / DIAGRAM_FPS;
 export const DIAGRAM_SRC = "/videos/pv-diagram.mp4";
 export const DIAGRAM_SRC_MOBILE = "/videos/pv-diagram-mobile.mp4";
 /** 720p rendition for devices too slow to scrub the full 1080p video smoothly. */
 export const DIAGRAM_SRC_REDUCED = "/videos/pv-diagram-reduced.mp4";
 export const DIAGRAM_POSTER = "/images/pv-diagram-poster.jpg";
-export const DIAGRAM_SCROLL_VH = 4.5;
+export const DIAGRAM_SCROLL_VH = 9;
 
 /** The five video-driven beats: everything the drone footage actually shows. */
 export const videoStoryPhases: VideoStoryPhase[] = [
@@ -67,9 +67,7 @@ export const videoStoryPhases: VideoStoryPhase[] = [
 
 /**
  * The seven diagram-driven beats: the electrical story that follows the physical build.
- * Frame ranges must stay in sync with scripts/build-diagram-video.mjs. The wallbox phase
- * has no dedicated footage yet — its caption still fades in on schedule, layered over the
- * "speicher-zum-haus" clip's continuing footage, until a dedicated clip can be spliced in.
+ * Frame ranges must stay in sync with scripts/build-diagram-video.mjs.
  */
 export const diagramStoryPhases: DiagramStoryPhase[] = [
   {
@@ -102,31 +100,31 @@ export const diagramStoryPhases: DiagramStoryPhase[] = [
     title: "Ihr Zuhause läuft mit der Sonne",
     description: "Haushaltsgeräte, Heizung und Licht – versorgt aus eigener Erzeugung.",
     startFrame: 240,
-    endFrame: 297,
+    endFrame: 473,
   },
   {
     id: "wallbox",
     kicker: "Wallbox",
     title: "Tanken, während Sie schlafen",
     description: "Ihr Elektroauto lädt über Nacht mit selbst erzeugtem Strom.",
-    startFrame: 298,
-    endFrame: 355,
+    startFrame: 474,
+    endFrame: 713,
   },
   {
     id: "smart-home",
     kicker: "Smart Home",
     title: "Energie, die mitdenkt",
     description: "Verbrauch, Speicher und Einspeisung – automatisch optimiert in einer App.",
-    startFrame: 356,
-    endFrame: 414,
+    startFrame: 714,
+    endFrame: 833,
   },
   {
     id: "abschluss",
     kicker: "Ergebnis",
     title: "Unabhängigkeit ist jetzt Serienausstattung",
     description: "Von der Dachanalyse bis zur Wallbox – eine Anlage, ein Ansprechpartner.",
-    startFrame: 415,
-    endFrame: 473,
+    startFrame: 834,
+    endFrame: 953,
   },
 ];
 

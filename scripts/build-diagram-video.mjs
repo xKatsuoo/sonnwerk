@@ -5,6 +5,10 @@
  * Segment two is trimmed to 234 of its 240 frames: the source clip ends with a four-way
  * split-screen recap in its last ~6 frames that doesn't fit this scroll-scrubbed format.
  *
+ * Segment four (the drone flyover) picks up in the exact same spot segment three ends on
+ * (car charging at the wallbox), then pulls back to reveal the house and neighborhood —
+ * split across the smart-home and abschluss captions since it's one continuous shot.
+ *
  * Run with: npm run build:diagram-video
  */
 import { join } from "node:path";
@@ -38,14 +42,19 @@ buildScrollVideo({
     {
       file: "speicher-zum-haus.mp4",
       frames: 234,
+      phases: [{ id: "hausversorgung", label: "Hausversorgung", startFrame: 240, endFrame: 473 }],
+    },
+    {
+      file: "wohnzimmer-zur-wallbox.mp4",
+      frames: 240,
+      phases: [{ id: "wallbox", label: "Wallbox", startFrame: 474, endFrame: 713 }],
+    },
+    {
+      file: "wallbox-drohenflug.mp4",
+      frames: 240,
       phases: [
-        // No dedicated wallbox footage exists yet — its caption still fades in at the
-        // right scroll position, just layered over this clip's continuing footage. Once
-        // a wallbox clip exists, splice it in here as its own segment.
-        { id: "hausversorgung", label: "Hausversorgung", startFrame: 240, endFrame: 297 },
-        { id: "wallbox", label: "Wallbox", startFrame: 298, endFrame: 355 },
-        { id: "smart-home", label: "Smart Home", startFrame: 356, endFrame: 414 },
-        { id: "abschluss", label: "Ergebnis", startFrame: 415, endFrame: 473 },
+        { id: "smart-home", label: "Smart Home", startFrame: 714, endFrame: 833 },
+        { id: "abschluss", label: "Ergebnis", startFrame: 834, endFrame: 953 },
       ],
     },
   ],
