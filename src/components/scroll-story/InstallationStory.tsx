@@ -2,9 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useLightweightVideo } from "@/hooks/useLightweightVideo";
 import { ensureGsap, ScrollTrigger } from "@/lib/gsap";
 import { captionOpacity, clamp01 } from "@/lib/crossfade";
-import { createVideoScrubber } from "@/lib/videoScrubber";
+import { prefersLightweightVideo } from "@/lib/deviceCapability";
+import { createLightweightPlayer, createVideoScrubber } from "@/lib/videoScrubber";
 import { Button } from "@/components/ui/Button";
 import {
   DIAGRAM_FPS,
@@ -53,31 +55,42 @@ export function InstallationStory({ onActivePhase }: InstallationStoryProps) {
   const scrollHintRef = useRef<HTMLDivElement>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const isLightweight = useLightweightVideo();
 
   useEffect(() => {
     const gsap = ensureGsap();
     const section = sectionRef.current;
     if (!section) return;
 
-    const heroScrubber = createVideoScrubber({
-      videoEl: heroVideoRef.current,
-      mobileVideoEl: heroMobileVideoRef.current,
-      canvasEl: heroCanvasRef.current,
-      videoSrc: VIDEO_SRC,
-      videoSrcMobile: VIDEO_SRC_MOBILE,
-      totalFrames: VIDEO_TOTAL_FRAMES,
-      fps: VIDEO_FPS,
-    });
-    const diagramScrubber = createVideoScrubber({
-      videoEl: diagramVideoRef.current,
-      mobileVideoEl: diagramMobileVideoRef.current,
-      canvasEl: diagramCanvasRef.current,
-      videoSrc: DIAGRAM_SRC,
-      videoSrcMobile: DIAGRAM_SRC_MOBILE,
-      totalFrames: DIAGRAM_TOTAL_FRAMES,
-      fps: DIAGRAM_FPS,
-    });
-    if (!heroScrubber || !diagramScrubber) return;
+    // Read this fresh instead of depending on the reactive isLightweight value for the
+    // same reason createVideoScrubber reads isMobile fresh: depending on it would tear
+    // down and rebuild this pin right after mount, corrupting the next section's
+    // measured start position (see that comment for the full story).
+    const lightweight = prefersLightweightVideo();
+
+    const heroEngine = lightweight
+      ? createLightweightPlayer({ videoEl: heroVideoRef.current, src: VIDEO_SRC_MOBILE })
+      : createVideoScrubber({
+          videoEl: heroVideoRef.current,
+          mobileVideoEl: heroMobileVideoRef.current,
+          canvasEl: heroCanvasRef.current,
+          videoSrc: VIDEO_SRC,
+          videoSrcMobile: VIDEO_SRC_MOBILE,
+          totalFrames: VIDEO_TOTAL_FRAMES,
+          fps: VIDEO_FPS,
+        });
+    const diagramEngine = lightweight
+      ? createLightweightPlayer({ videoEl: diagramVideoRef.current, src: DIAGRAM_SRC_MOBILE })
+      : createVideoScrubber({
+          videoEl: diagramVideoRef.current,
+          mobileVideoEl: diagramMobileVideoRef.current,
+          canvasEl: diagramCanvasRef.current,
+          videoSrc: DIAGRAM_SRC,
+          videoSrcMobile: DIAGRAM_SRC_MOBILE,
+          totalFrames: DIAGRAM_TOTAL_FRAMES,
+          fps: DIAGRAM_FPS,
+        });
+    if (!heroEngine || !diagramEngine) return;
 
     let lastActivePhase = -1;
     const lastPhase = combinedStoryPhases[combinedStoryPhases.length - 1];
@@ -116,11 +129,15 @@ export function InstallationStory({ onActivePhase }: InstallationStoryProps) {
         if (globalFrame < VIDEO_TOTAL_FRAMES) {
           if (heroLayerRef.current) heroLayerRef.current.style.opacity = "1";
           if (diagramLayerRef.current) diagramLayerRef.current.style.opacity = "0";
-          heroScrubber.seekTo(globalFrame);
+          heroEngine.seekTo(globalFrame);
+          heroEngine.setActive(true);
+          diagramEngine.setActive(false);
         } else {
           if (heroLayerRef.current) heroLayerRef.current.style.opacity = "0";
           if (diagramLayerRef.current) diagramLayerRef.current.style.opacity = "1";
-          diagramScrubber.seekTo(globalFrame - VIDEO_TOTAL_FRAMES);
+          diagramEngine.seekTo(globalFrame - VIDEO_TOTAL_FRAMES);
+          diagramEngine.setActive(true);
+          heroEngine.setActive(false);
         }
 
         if (scrollHintRef.current) {
@@ -136,8 +153,8 @@ export function InstallationStory({ onActivePhase }: InstallationStoryProps) {
 
     return () => {
       trigger.kill();
-      heroScrubber.dispose();
-      diagramScrubber.dispose();
+      heroEngine.dispose();
+      diagramEngine.dispose();
     };
   }, [onActivePhase]);
 
@@ -151,7 +168,7 @@ export function InstallationStory({ onActivePhase }: InstallationStoryProps) {
       <div ref={heroLayerRef} className="absolute inset-0">
         <video
           ref={heroVideoRef}
-          className={cn("absolute inset-0 h-full w-full object-cover", isMobile && "hidden")}
+          className={cn("absolute inset-0 h-full w-full object-cover", isMobile && !isLightweight && "hidden")}
           poster={VIDEO_POSTER}
           muted
           playsInline
@@ -173,7 +190,10 @@ export function InstallationStory({ onActivePhase }: InstallationStoryProps) {
           ref={heroCanvasRef}
           width={854}
           height={480}
-          className={cn("absolute inset-0 h-full w-full object-cover", !isMobile && "hidden")}
+          className={cn(
+            "absolute inset-0 h-full w-full object-cover",
+            (!isMobile || isLightweight) && "hidden",
+          )}
           aria-hidden
         />
       </div>
@@ -181,7 +201,7 @@ export function InstallationStory({ onActivePhase }: InstallationStoryProps) {
       <div ref={diagramLayerRef} className="absolute inset-0" style={{ opacity: 0 }}>
         <video
           ref={diagramVideoRef}
-          className={cn("absolute inset-0 h-full w-full object-cover", isMobile && "hidden")}
+          className={cn("absolute inset-0 h-full w-full object-cover", isMobile && !isLightweight && "hidden")}
           poster={DIAGRAM_POSTER}
           muted
           playsInline
@@ -202,7 +222,10 @@ export function InstallationStory({ onActivePhase }: InstallationStoryProps) {
           ref={diagramCanvasRef}
           width={854}
           height={480}
-          className={cn("absolute inset-0 h-full w-full object-cover", !isMobile && "hidden")}
+          className={cn(
+            "absolute inset-0 h-full w-full object-cover",
+            (!isMobile || isLightweight) && "hidden",
+          )}
           aria-hidden
         />
       </div>
