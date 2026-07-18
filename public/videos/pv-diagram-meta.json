@@ -1,0 +1,51 @@
+{
+  "fps": 24,
+  "totalFrames": 474,
+  "duration": 19.75,
+  "width": 1920,
+  "height": 1080,
+  "phases": [
+    {
+      "id": "stromfluss",
+      "label": "Stromfluss",
+      "startFrame": 0,
+      "endFrame": 79
+    },
+    {
+      "id": "wechselrichter",
+      "label": "Wechselrichter",
+      "startFrame": 80,
+      "endFrame": 159
+    },
+    {
+      "id": "batteriespeicher",
+      "label": "Batteriespeicher",
+      "startFrame": 160,
+      "endFrame": 239
+    },
+    {
+      "id": "hausversorgung",
+      "label": "Hausversorgung",
+      "startFrame": 240,
+      "endFrame": 297
+    },
+    {
+      "id": "wallbox",
+      "label": "Wallbox",
+      "startFrame": 298,
+      "endFrame": 355
+    },
+    {
+      "id": "smart-home",
+      "label": "Smart Home",
+      "startFrame": 356,
+      "endFrame": 414
+    },
+    {
+      "id": "abschluss",
+      "label": "Ergebnis",
+      "startFrame": 415,
+      "endFrame": 473
+    }
+  ]
+}

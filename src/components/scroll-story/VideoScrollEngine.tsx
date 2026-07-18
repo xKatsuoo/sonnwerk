@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { ensureGsap, ScrollTrigger } from "@/lib/gsap";
+import { useRef } from "react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useVideoScrollScrub } from "@/hooks/useVideoScrollScrub";
 import { Button } from "@/components/ui/Button";
 import {
   VIDEO_FPS,
@@ -13,7 +13,7 @@ import {
   VIDEO_TOTAL_FRAMES,
   videoStoryPhases,
 } from "@/data/storyPhases";
-import { captionOpacity, clamp01 } from "@/lib/crossfade";
+import { clamp01 } from "@/lib/crossfade";
 import { cn } from "@/lib/cn";
 
 /** Width, in frames, of the crossfade window between two adjacent phase captions. */
@@ -24,9 +24,8 @@ interface VideoScrollEngineProps {
 }
 
 /**
- * Pins the hero section for the length of the installation video and maps scroll
- * progress directly onto `video.currentTime`. Never calls `.play()` — the video is
- * scrubbed exclusively by the user's scroll position, forwards and backwards alike.
+ * Pins the hero section for the length of the installation video. See
+ * useVideoScrollScrub for how scroll position maps onto the video frame.
  */
 export function VideoScrollEngine({ onActivePhase }: VideoScrollEngineProps) {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -37,162 +36,26 @@ export function VideoScrollEngine({ onActivePhase }: VideoScrollEngineProps) {
   const scrollHintRef = useRef<HTMLDivElement>(null);
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  useEffect(() => {
-    const gsap = ensureGsap();
-    const section = sectionRef.current;
-    if (!section) return;
-
-    // Read the media query directly instead of depending on the `isMobile` state value:
-    // that state starts false during SSR and flips true just after mount on real mobile
-    // devices, which would otherwise tear down and recreate this trigger. Killing and
-    // rebuilding a pin makes the section's height collapse to its natural, unpinned size
-    // for an instant — and GSAP measures the *next* pinned section's start position off
-    // of that same instant, permanently baking in a start value that's short by this
-    // section's entire scroll distance. Reading the query fresh here means the pin is
-    // built once, correctly, and never needs to be torn down.
-    const isMobileNow = typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches;
-    const supportsRVFC =
-      typeof HTMLVideoElement !== "undefined" && "requestVideoFrameCallback" in HTMLVideoElement.prototype;
-    const useCanvas = isMobileNow || !supportsRVFC;
-    const sourceVideo = useCanvas ? mobileVideoRef.current : videoRef.current;
-    const canvas = canvasRef.current;
-    const ctx2d = useCanvas ? (canvas?.getContext("2d") ?? null) : null;
-
-    if (!sourceVideo) return;
-
-    // Only the element actually driving the scrub gets a `src`, so the browser never
-    // fetches both the desktop and mobile renditions at once.
-    sourceVideo.src = useCanvas ? VIDEO_SRC_MOBILE : VIDEO_SRC;
-
-    let metadataReady = sourceVideo.readyState >= 1;
-    let seeking = false;
-    let displayedFrame = -1;
-    let targetFrame = 0;
-    let lastActivePhase = -1;
-    let disposed = false;
-    let watchdog: ReturnType<typeof setTimeout> | undefined;
-
-    const draw = () => {
-      if (useCanvas && canvas && ctx2d) {
-        ctx2d.drawImage(sourceVideo, 0, 0, canvas.width, canvas.height);
+  useVideoScrollScrub({
+    sectionRef,
+    videoRef,
+    mobileVideoRef,
+    canvasRef,
+    phaseRefs,
+    videoSrc: VIDEO_SRC,
+    videoSrcMobile: VIDEO_SRC_MOBILE,
+    totalFrames: VIDEO_TOTAL_FRAMES,
+    fps: VIDEO_FPS,
+    scrollVh: VIDEO_SCROLL_VH,
+    phases: videoStoryPhases,
+    fadeFrames: FADE_FRAMES,
+    onActivePhase,
+    onFrameUpdate: (frame) => {
+      if (scrollHintRef.current) {
+        scrollHintRef.current.style.opacity = String(clamp01(1 - frame / 40));
       }
-    };
-
-    const settle = () => {
-      if (disposed) return;
-      clearTimeout(watchdog);
-      seeking = false;
-      displayedFrame = Math.round(sourceVideo.currentTime * VIDEO_FPS);
-      draw();
-      if (targetFrame !== displayedFrame) advance();
-    };
-
-    const advance = () => {
-      if (seeking || !metadataReady) return;
-      const time = Math.min(
-        sourceVideo.duration || VIDEO_TOTAL_FRAMES / VIDEO_FPS,
-        Math.max(0, targetFrame / VIDEO_FPS),
-      );
-      // A no-op seek (target time already current, e.g. sitting at frame 0) never fires
-      // a 'seeked' or video-frame callback, which would otherwise leave `seeking` stuck
-      // true forever and freeze all future scrubbing.
-      if (Math.abs(sourceVideo.currentTime - time) < 1 / (VIDEO_FPS * 2)) {
-        displayedFrame = targetFrame;
-        draw();
-        return;
-      }
-      seeking = true;
-      sourceVideo.currentTime = time;
-      // Safety net: if the browser never reports this seek as complete, unstick scrubbing anyway.
-      clearTimeout(watchdog);
-      watchdog = setTimeout(settle, 400);
-    };
-
-    // On many mobile browsers, seeking a video that has never played never actually
-    // decodes a paintable frame — drawImage() silently produces nothing, so the canvas
-    // stays blank. Priming with a muted play()/pause() the moment metadata is ready
-    // forces the decoder to actually start producing frames for later seeks to use.
-    let primed = false;
-    const primeDecoder = () => {
-      if (primed || !useCanvas) return;
-      primed = true;
-      Promise.resolve(sourceVideo.play())
-        .then(() => {
-          sourceVideo.pause();
-          draw();
-        })
-        .catch(() => {});
-    };
-
-    const onLoadedMetadata = () => {
-      metadataReady = true;
-      primeDecoder();
-      draw();
-      advance();
-    };
-
-    if (useCanvas) {
-      sourceVideo.addEventListener("seeked", settle);
-      // 'loadedmetadata' fires before pixel data is guaranteed; 'loadeddata' is the
-      // first point a frame is actually decodable, which is what the canvas needs.
-      sourceVideo.addEventListener("loadeddata", draw);
-    } else if (sourceVideo.requestVideoFrameCallback) {
-      const loop = () => {
-        if (disposed) return;
-        settle();
-        sourceVideo.requestVideoFrameCallback(loop);
-      };
-      sourceVideo.requestVideoFrameCallback(loop);
-    }
-    sourceVideo.addEventListener("loadedmetadata", onLoadedMetadata);
-    if (sourceVideo.readyState >= 1) onLoadedMetadata();
-    if (sourceVideo.readyState >= 2) draw();
-
-    const updatePhaseOverlays = (frame: number) => {
-      let activeIndex = -1;
-      videoStoryPhases.forEach((phase, i) => {
-        const el = phaseRefs.current[i];
-        if (!el) return;
-        const opacity = captionOpacity(frame, phase.startFrame, phase.endFrame, FADE_FRAMES, {
-          fadeIn: i > 0,
-          fadeOut: i < videoStoryPhases.length - 1,
-        });
-        if (opacity > 0.5) activeIndex = i;
-        gsap.set(el, { opacity, y: (1 - opacity) * 14 });
-      });
-      if (activeIndex !== -1 && activeIndex !== lastActivePhase) {
-        lastActivePhase = activeIndex;
-        onActivePhase(activeIndex);
-      }
-    };
-
-    const trigger = ScrollTrigger.create({
-      trigger: section,
-      start: "top top",
-      end: () => `+=${window.innerHeight * VIDEO_SCROLL_VH}`,
-      pin: true,
-      pinSpacing: true,
-      scrub: true,
-      anticipatePin: 1,
-      onUpdate: (self) => {
-        targetFrame = Math.round(self.progress * (VIDEO_TOTAL_FRAMES - 1));
-        updatePhaseOverlays(targetFrame);
-        if (scrollHintRef.current) {
-          gsap.set(scrollHintRef.current, { opacity: clamp01(1 - targetFrame / 40) });
-        }
-        advance();
-      },
-    });
-
-    return () => {
-      disposed = true;
-      clearTimeout(watchdog);
-      trigger.kill();
-      sourceVideo.removeEventListener("seeked", settle);
-      sourceVideo.removeEventListener("loadeddata", draw);
-      sourceVideo.removeEventListener("loadedmetadata", onLoadedMetadata);
-    };
-  }, [onActivePhase]);
+    },
+  });
 
   return (
     <section

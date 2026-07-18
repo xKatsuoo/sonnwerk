@@ -12,8 +12,5 @@ export interface VideoStoryPhase extends StoryPhase {
   endFrame: number;
 }
 
-/** A story phase that maps to a share (0–1) of the animated energy-flow timeline. */
-export interface DiagramStoryPhase extends StoryPhase {
-  start: number;
-  end: number;
-}
+/** A story phase that maps to an exact frame range of the electrical-journey video. */
+export type DiagramStoryPhase = VideoStoryPhase;
